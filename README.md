@@ -1,4 +1,5 @@
 The SmartErasor Project
+====
 In SmartErasor, you are required to implement a program to erase several characters auto-
 matically and gradually in a given video, while keeping the background texture unchanged 3
 perceptively.
