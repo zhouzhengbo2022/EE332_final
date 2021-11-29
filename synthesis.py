@@ -10,9 +10,8 @@ EIGHT_CONNECTED_NEIGHBOR_KERNEL = np.array([[1., 1., 1.],
 SIGMA_COEFF = 6.4      # The denominator for a 2D Gaussian sigma used in the reference implementation.
 ERROR_THRESHOLD = 0.2  # The default error threshold for synthesis acceptance in the reference implementation.
 
-LONG_M = np.ones((16, 16)) * 10.0
-
-def normalized_ssd(sample, window, mask):
+@nb.jit()
+def normalized_ssd(sample, window, mask, LONG_M):
     wh, ww = window.shape
     sh, sw = sample.shape
 
@@ -124,11 +123,16 @@ def texture_can_be_synthesized(mask):
 
 def initialize_texture_synthesis(original_sample, kernel_size):
     # Convert original to sample representation.
-    sample = cv2.cvtColor(original_sample, cv2.COLOR_BGR2GRAY)
+    norm_sample = cv2.cvtColor(original_sample, cv2.COLOR_BGR2GRAY)
     
     # Convert sample to floating point and normalize to the range [0., 1.]
-    sample = sample.astype(np.float64)
-    sample = sample / 255.
+    norm_sample = norm_sample.astype(np.float64)
+    norm_sample = norm_sample / 255.
+    H, W = norm_sample.shape[0], norm_sample.shape[1]
+    print(H, W)
+
+    sample = norm_sample[:H-40, :]
+    # sample = np.copy(norm_sample)
 
     # Generate window
     window = np.copy(sample)
@@ -148,12 +152,14 @@ def initialize_texture_synthesis(original_sample, kernel_size):
 
     return sample, window, mask, result_window
 
+@nb.jit()
 def synthesize_texture(original_sample, kernel_size, visualize):
     global gif_count
 
     half_size = kernel_size // 2
 
     (sample, window, mask, result_window) = initialize_texture_synthesis(original_sample, kernel_size)
+    LONG_M = np.ones((2 * half_size, 2 * half_size)) * 10.0
 
     # Synthesize texture until all pixels in the window are filled.
     while texture_can_be_synthesized(mask):
@@ -171,7 +177,7 @@ def synthesize_texture(original_sample, kernel_size, visualize):
             mask_slice = mask[ch-half_size:ch+half_size, cw-half_size:cw+half_size]
 
             # Compute SSD for the current pixel neighborhood and select an index with low error.
-            ssd = normalized_ssd(sample, window_slice, mask_slice)
+            ssd = normalized_ssd(sample, window_slice, mask_slice, LONG_M)
             # print(ssd)
             indices = get_candidate_indices(ssd)
             selected_index = select_pixel_index(ssd, indices)
@@ -193,7 +199,7 @@ def synthesize_texture(original_sample, kernel_size, visualize):
 
     if visualize:
         cv2.imshow('synthesis window', result_window)
-        cv2.waitKey(0)
+        # cv2.waitKey(0)
         cv2.destroyAllWindows()
 
     return result_window
