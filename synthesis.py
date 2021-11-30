@@ -86,7 +86,7 @@ def select_pixel_index(normalized_ssd, indices, method='uniform'):
 def get_neighboring_pixel_indices(pixel_mask):
     # Taking the difference between the dilated mask and the initial mask
     # gives only the 8-connected neighbors of the mask frontier.
-    kernel = np.ones((4, 4))
+    kernel = np.ones((2, 2))
     dilated_mask = cv2.dilate(pixel_mask, kernel, iterations=1)
     neighbors = dilated_mask - pixel_mask
 
@@ -129,13 +129,9 @@ def initialize_texture_synthesis(original_sample, kernel_size):
     norm_sample = norm_sample.astype(np.float64)
     norm_sample = norm_sample / 255.
     H, W = norm_sample.shape[0], norm_sample.shape[1]
-    print(H, W)
-
-    sample = norm_sample[:H-40, :]
-    # sample = np.copy(norm_sample)
 
     # Generate window
-    window = np.copy(sample)
+    window = norm_sample[:H-40, :]
 
     # Generate output window
     result_window = np.copy(original_sample)
@@ -144,21 +140,29 @@ def initialize_texture_synthesis(original_sample, kernel_size):
     h, w = window.shape
     mask = np.ones((h, w), dtype=np.float64)
 
-    hole_index = np.where(sample == 1.)
+    hole_index = np.where(window == 1.)
 
     for hole_x, hole_y in zip(hole_index[0], hole_index[1]):
         window[hole_x, hole_y] = 0.
         mask[hole_x, hole_y] = 0
 
-    return sample, window, mask, result_window
+    return window, mask, result_window
 
 @nb.jit()
-def synthesize_texture(original_sample, kernel_size, visualize):
+def synthesize_texture(original_sample, sample, kernel_size, visualize):
     global gif_count
 
     half_size = kernel_size // 2
 
-    (sample, window, mask, result_window) = initialize_texture_synthesis(original_sample, kernel_size)
+    norm_sample = cv2.cvtColor(sample, cv2.COLOR_BGR2GRAY)
+    
+    norm_sample = norm_sample.astype(np.float64)
+    norm_sample = norm_sample / 255.
+    H, W = norm_sample.shape[0], norm_sample.shape[1]
+
+    sample = norm_sample[:H-30, :]
+
+    (window, mask, result_window) = initialize_texture_synthesis(original_sample, kernel_size)
     LONG_M = np.ones((2 * half_size, 2 * half_size)) * 10.0
 
     # Synthesize texture until all pixels in the window are filled.
