@@ -37,19 +37,25 @@ def parse_args():
 
 def main():
     args = parse_args()
-
     template = cv2.imread(args.template_path)
     if template is None:
         raise ValueError('Unable to read image from template_path.')
+    path = args.template_path
+    image_parameter = {'./target.png' : [[0,0,0], [25, 255, 255], 278, 292, 0, 50],
+                       './blanket.png' : [[0, 0, 120], [180, 15, 255], 46, 62, 186, 216]
+                       }
+    low_bound, high_bound = np.array(image_parameter[path][0]), np.array(image_parameter[path][1])
+    width_left, width_right = image_parameter[path][2], image_parameter[path][3]
+    height_top, height_bottom = image_parameter[path][4], image_parameter[path][5]
 
-    template_mask = create_mask(template, np.array([0, 0, 0]), np.array([25, 255, 255]), np.ones((3, 3), np.uint8), np.ones((3, 3), np.uint8), 1)
+    template_mask = create_mask(template, low_bound, high_bound, np.ones((3, 3), np.uint8), np.ones((3, 3), np.uint8), 1)
     hole_index = np.where(template_mask == 255)
 
     for hole_row, hole_col in zip(hole_index[0], hole_index[1]):
         template[hole_row, hole_col] = 255
 
 
-    target = np.copy(template)[0:50, 278:292, :]
+    target = np.copy(template)[height_top:height_bottom, width_left:width_right, :]
     H, W = template.shape[0], template.shape[1]
     height, width = target.shape[0], target.shape[1]
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -57,7 +63,7 @@ def main():
     out = cv2.VideoWriter(args.out_path, fourcc, 15.0, (320, 240))
 
     # frame_out = synthesize_texture(original_sample=template, sample=template, kernel_size=args.kernel_size, visualize=args.visualize)
-    template[0:50, 278:292, :] = 255
+    template[height_top:height_bottom, width_left:width_right, :] = 255
 
     start_flag = 0
 
