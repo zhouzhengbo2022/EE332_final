@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--out_path', type=str, required=False, default='./Output.avi', help='the path of erased video')
 
     # parameters for texture impainting
-    parser.add_argument('--kernel_size', type=int, required=False, default=35, help='One dimension of the square synthesis kernel')
+    parser.add_argument('--kernel_size', type=int, required=False, default=23, help='One dimension of the square synthesis kernel')
     parser.add_argument('--visualize', required=False, action='store_true', help='Visualize the synthesis process')
 
 
@@ -48,33 +48,35 @@ def main():
     for hole_row, hole_col in zip(hole_index[0], hole_index[1]):
         template[hole_row, hole_col] = 255
 
-    target = template[0:50, 278:292, :]
+
+    target = np.copy(template)[0:50, 278:292, :]
     H, W = template.shape[0], template.shape[1]
     height, width = target.shape[0], target.shape[1]
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     cap = cv2.VideoCapture(args.in_path)
     out = cv2.VideoWriter(args.out_path, fourcc, 15.0, (320, 240))
 
+    # frame_out = synthesize_texture(original_sample=template, sample=template, kernel_size=args.kernel_size, visualize=args.visualize)
+    template[0:50, 278:292, :] = 255
+
     start_flag = 0
 
-    while(1):
+    while(start_flag <= 227):
         print(start_flag)
         ret, frame = cap.read()
         target_col, frame_img = track(H, W, height, width, ret, frame, target)
         frame_mask = np.copy(template_mask)
 
-        # frame_mask = create_mask(frame_img, np.array([0, 0, 0]), np.array([25, 255, 255]), np.ones((3, 3), np.uint8), np.ones((3, 3), np.uint8), 1)
-        # hole_index = np.where(frame_mask == 255)
-
         for hole_row, hole_col in zip(hole_index[0], hole_index[1]):
-            if hole_col >= target_col:
+            if hole_col > target_col:
                 frame_img[hole_row, hole_col] = 255
             else:
                 frame_mask[hole_row, hole_col] = 0
 
         if start_flag > 0 and len(hole_index_last[0]) != 0:
             for hole_row, hole_col in zip(hole_index_last[0], hole_index_last[1]):
-                frame_img[hole_row, hole_col] = frame_last[hole_row, hole_col]
+                if hole_col > target_col + 30:
+                    frame_img[hole_row, hole_col] = frame_last[hole_row, hole_col]
 
         hole_index_last = np.where(frame_mask == 255)
         

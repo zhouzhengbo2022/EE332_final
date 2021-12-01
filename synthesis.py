@@ -86,7 +86,7 @@ def select_pixel_index(normalized_ssd, indices, method='uniform'):
 def get_neighboring_pixel_indices(pixel_mask):
     # Taking the difference between the dilated mask and the initial mask
     # gives only the 8-connected neighbors of the mask frontier.
-    kernel = np.ones((2, 2))
+    kernel = np.ones((3, 3))
     dilated_mask = cv2.dilate(pixel_mask, kernel, iterations=1)
     neighbors = dilated_mask - pixel_mask
 
@@ -131,7 +131,7 @@ def initialize_texture_synthesis(original_sample, kernel_size):
     H, W = norm_sample.shape[0], norm_sample.shape[1]
 
     # Generate window
-    window = norm_sample[:H-40, :]
+    window = np.copy(norm_sample)
 
     # Generate output window
     result_window = np.copy(original_sample)
@@ -160,7 +160,8 @@ def synthesize_texture(original_sample, sample, kernel_size, visualize):
     norm_sample = norm_sample / 255.
     H, W = norm_sample.shape[0], norm_sample.shape[1]
 
-    sample = norm_sample[:H-30, :]
+    # sample = norm_sample[:H-30, :]
+    sample = np.copy(norm_sample)[:H-30, :]
 
     (window, mask, result_window) = initialize_texture_synthesis(original_sample, kernel_size)
     LONG_M = np.ones((2 * half_size, 2 * half_size)) * 10.0
